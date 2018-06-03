@@ -14,7 +14,8 @@ extra-source-files:
 
 library
   exposed-modules:
-      Track
+      Playlist
+    , Track
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Werror -O2
@@ -22,6 +23,8 @@ library
       base >=4.7 && <5
     , bytestring
     , containers
+    , directory
+    , filepath
     , text
     , typed-process
     , xml
