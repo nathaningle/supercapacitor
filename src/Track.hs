@@ -49,6 +49,9 @@ newtype TrackError = FfprobeProcessError String  -- ^ the @ffprobe(1)@ process e
 
 -- | Read music track metadata from a file using FFmpeg's @ffprobe(1)@, which
 -- must be on the PATH.
+--
+-- We don't validate the path prior to running @ffprobe(1)@ on it; instead we
+-- check the exit code and return @ffprobe(1)@'s error.
 readTrackFile :: FilePath -> IO (Either TrackError Track)
 readTrackFile path = do
   (exitcode, outstr, errstr) <- readProcess cfg
