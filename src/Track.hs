@@ -17,7 +17,7 @@ import           Data.Bifunctor             (second)
 import           Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import qualified Data.Map.Strict            as M
-import           Data.Maybe                 (catMaybes, mapMaybe)
+import           Data.Maybe                 (catMaybes, fromMaybe, mapMaybe)
 import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           Data.Text.Encoding         (decodeUtf8)
@@ -33,7 +33,8 @@ import           Text.XML.Light             (CData (..), Content (..),
 
 -- | Metadata describing a single music track or song.
 data Track = Track { trkFilePath :: !FilePath
-                   , trkDuration :: !(Maybe Int)   -- ^ milliseconds
+                   , trkHttpUrl  :: !(Maybe String)  -- ^ URL we will serve this track at
+                   , trkDuration :: !(Maybe Int)     -- ^ milliseconds
                    , trkArtist   :: !(Maybe Text)
                    , trkAlbum    :: !(Maybe Text)
                    , trkTitle    :: !(Maybe Text)
@@ -65,6 +66,7 @@ readTrackFile path = do
 -- | Parse @ffprobe(1)@ output.
 parseTrackProbe :: FilePath -> ByteString -> Track
 parseTrackProbe path str = Track { trkFilePath = path
+                                 , trkHttpUrl  = Nothing
                                  , trkDuration = secondsToMilliseconds <$> lookupRead "duration"
                                  , trkArtist   = lookupText "TAG:artist"
                                  , trkAlbum    = lookupText "TAG:album"
@@ -97,7 +99,7 @@ toXML Track{..} = blank_element { elName    = blank_name { qName = "track" }
   where
     mkElemText t = Elem . makeXMLLeaf t . T.unpack
     mkElemNum  t = Elem . makeXMLLeaf t . show
-    locElem = Elem $ makeXMLLeaf "location" trkFilePath
+    locElem = Elem $ makeXMLLeaf "location" $ fromMaybe trkFilePath trkHttpUrl
     content = locElem : catMaybes [ mkElemNum  "duration" <$> trkDuration
                                   , mkElemText "creator"  <$> trkArtist
                                   , mkElemText "album"    <$> trkAlbum

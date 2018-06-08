@@ -9,31 +9,61 @@ Portability : non-portable
 
 A list of music tracks with metadata.
 -}
+{-# LANGUAGE RecordWildCards #-}
 module Playlist where
 
+import           Config                (Config (..))
 import           Track                 (Track (..), TrackError (..),
                                         readTrackFile, toXML)
 
 import           Data.ByteString       (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import           Data.List             (sortOn)
-import           System.Directory      (listDirectory)
-import           System.FilePath       ((</>))
+import           Data.Either           (partitionEithers)
+import           Data.List             (sortOn, stripPrefix)
+import           Network.URI.Encode    (encode)
+import           System.Directory      (doesDirectoryExist, listDirectory)
+import           System.FilePath       (addTrailingPathSeparator, joinPath,
+                                        splitDirectories, (</>))
 
 import           Text.XML.Light
 
 
 type Playlist = [Track]
 
+type Artist = String
+
+type Album = String
+
+-- | Things that can go wrong when generating a 'Playlist'.
+data PlaylistError = TrackErrors [TrackError]
+                   | NonexistentAlbumDir FilePath
+                   deriving Show
+
 
 -- | Make a playlist containing all files that are the immediate contents of a
 -- directory.  Note that this does not check that the files are music files,
 -- or even that they are regular files — we leave that to 'readTrackFile'.
-playlistDir :: FilePath -> IO (Either TrackError Playlist)
+playlistDir :: FilePath -> IO (Either PlaylistError Playlist)
 playlistDir path = do
   files <- listDirectory path
   tracks <- mapM (readTrackFile . (path </>)) files
-  pure $ sortOn trkTrackNum <$> sequence tracks
+  pure $ case partitionEithers tracks of
+    ([], ts) -> Right $ sortOn trkTrackNum ts
+    (es, _ ) -> Left  $ TrackErrors es
+
+
+-- | Generate a 'Playlist' for a given artist and album.  This assumes that
+-- in 'musicRootPath' there exists a directory with the same name as the
+-- artist, and in that directory there exists a directory with the same name as
+-- the album.
+makeAlbumPlaylist :: Config -> Artist -> Album -> IO (Either PlaylistError Playlist)
+makeAlbumPlaylist Config{..} artist album = do
+  albumDirExists <- doesDirectoryExist albumDirPath
+  if albumDirExists
+    then playlistDir albumDirPath
+    else pure $ Left (NonexistentAlbumDir albumDirPath)
+  where
+    albumDirPath = musicRootPath </> artist </> album
 
 
 -- | Convert a 'Playlist' to its XSPF representation.
@@ -54,11 +84,24 @@ toXspf tracks = Element { elName    = blank_name { qName = "playlist" }
                               , elContent = map (Elem . toXML) tracks
                               }
 
--- | Textual XSPF representation of a 'Playlist'.
-showXspfBS :: Playlist -> ByteString
-showXspfBS tracks = BS.pack $ xmlHeaderUtf8 ++ showElement (toXspf tracks)
+-- | Textual XSPF representation of a 'Playlist'.  Helper for serving via HTTP.
+showXspfBS :: Config -> Playlist -> ByteString
+showXspfBS cfg tracks = BS.pack $ xmlHeaderUtf8 ++ showElement (toXspfRemote cfg tracks)
 
 -- | The header our XSPF will use.  This differs from that in 'Text.XML.Light'
 -- by specifiying the encoding.
 xmlHeaderUtf8 :: String
 xmlHeaderUtf8 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+
+-- | Convert a path to a file in the local filesystem to the URL at which we'll
+-- serve the file.
+pathLocalToRemote :: Config -> FilePath -> Maybe String
+pathLocalToRemote Config{..} = fmap toUrlPath . stripPrefix (addTrailingPathSeparator musicRootPath)
+  where
+    toUrlPath = (musicRootUrl </>) . joinPath . map encode . splitDirectories
+
+-- | Convert a 'Playlist' to its XSPF representation with URLs.
+toXspfRemote :: Config -> Playlist -> Element
+toXspfRemote cfg = toXspf . map updateUrl
+  where
+    updateUrl track = track { trkHttpUrl = pathLocalToRemote cfg (trkFilePath track) }
