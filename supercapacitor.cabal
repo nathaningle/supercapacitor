@@ -31,3 +31,16 @@ library
     , uri-encode
     , xml
   default-language: Haskell2010
+
+executable supercap
+  main-is: app/supercap.hs
+  ghc-options: -Wall -Wcompat -Werror -O2
+  build-depends:
+      base >=4.7 && <5
+    , http-types
+    , Spock
+    , supercapacitor
+    , text
+    , wai-middleware-static
+    , xml
+  default-language: Haskell2010
