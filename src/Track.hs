@@ -20,7 +20,7 @@ import qualified Data.Map.Strict            as M
 import           Data.Maybe                 (catMaybes, fromMaybe, mapMaybe)
 import           Data.Text                  (Text)
 import qualified Data.Text                  as T
-import           Data.Text.Encoding         (decodeUtf8)
+import           Data.Text.Encoding         (decodeLatin1)
 import           System.Exit                (ExitCode (..))
 import           System.Process.Typed       (proc, readProcess)
 import           Text.Read                  (readMaybe)
@@ -77,7 +77,7 @@ parseTrackProbe path str = Track { trkFilePath = path
   where
     m = M.fromList $ mapMaybe splitEquals $ LBC.lines str
     lookupRead k = (readMaybe . LBC.unpack) =<< M.lookup k m
-    lookupText k = (decodeUtf8 . LBC.toStrict) <$> M.lookup k m
+    lookupText k = (decodeLatin1 . LBC.toStrict) <$> M.lookup k m
 
 -- | @ffprobe(1)@ reports duration in decimal seconds, but XSPF specifies
 -- integral milliseconds.

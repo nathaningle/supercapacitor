@@ -20,7 +20,7 @@ import           Data.ByteString       (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Either           (partitionEithers)
 import           Data.List             (sortOn, stripPrefix)
-import           Network.URI.Encode    (encode)
+import qualified Network.URI.Encode    as URI
 import           System.Directory      (doesDirectoryExist, listDirectory)
 import           System.FilePath       (addTrailingPathSeparator, joinPath,
                                         splitDirectories, (</>))
@@ -36,7 +36,7 @@ type Album = String
 
 -- | Things that can go wrong when generating a 'Playlist'.
 data PlaylistError = TrackErrors [TrackError]
-                   | NonexistentAlbumDir FilePath
+                   | NonexistentDir FilePath
                    deriving Show
 
 
@@ -61,7 +61,7 @@ makeAlbumPlaylist Config{..} artist album = do
   albumDirExists <- doesDirectoryExist albumDirPath
   if albumDirExists
     then playlistDir albumDirPath
-    else pure $ Left (NonexistentAlbumDir albumDirPath)
+    else pure $ Left (NonexistentDir albumDirPath)
   where
     albumDirPath = musicRootPath </> artist </> album
 
@@ -98,7 +98,7 @@ xmlHeaderUtf8 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 pathLocalToRemote :: Config -> FilePath -> Maybe String
 pathLocalToRemote Config{..} = fmap toUrlPath . stripPrefix (addTrailingPathSeparator musicRootPath)
   where
-    toUrlPath = (musicRootUrl </>) . joinPath . map encode . splitDirectories
+    toUrlPath = (musicRootUrl </>) . joinPath . map URI.encode . splitDirectories
 
 -- | Convert a 'Playlist' to its XSPF representation with URLs.
 toXspfRemote :: Config -> Playlist -> Element
