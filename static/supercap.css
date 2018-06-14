@@ -1,0 +1,61 @@
+/*
+ * File      : supercap.css
+ * Copyright : 2018 Nathan Ingle
+ * Licence   : BSD3
+ */
+body {
+    font-family: Ubuntu, Roboto, sans-serif;
+    margin: 6ex 0px 0px 0px;  /* margin-top ought to be larger than header height */
+}
+
+header {
+    background-color: #0D355A;
+    margin: 0px;
+    padding: 0.5ex 2em;
+    width: 100%;
+	height: 5ex;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+}
+
+header h1 {
+    font-size: 100%;
+    font-weight: bold;
+    color: white;
+}
+
+nav {
+    padding: 1ex;
+}
+
+nav a {
+    color: #0D355A;
+}
+
+main {
+    margin-left: auto;
+    margin-right: auto;
+    width: 20em;
+    padding: 1em;
+}
+
+h2 { margin-bottom: 0px; }
+
+/* The 'aalist' class is an unordered list of hyperlinks. */
+ul.aalist {
+    padding-left: 0px;
+    margin-top: 0px;
+}
+
+ul.aalist li {
+    list-style: none;
+}
+
+ul.aalist li a {
+    display: block;
+    padding: 1ex 1em;
+    color: #0D355A;
+    text-decoration: none;
+    font-size: 110%;
+}
