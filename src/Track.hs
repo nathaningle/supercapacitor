@@ -20,9 +20,9 @@ import qualified Data.Map.Strict            as M
 import           Data.Maybe                 (catMaybes, fromMaybe, mapMaybe)
 import           Data.Text                  (Text)
 import qualified Data.Text                  as T
-import           Data.Text.Encoding         (decodeLatin1)
+import           Data.Text.Encoding         (decodeUtf8')
 import           System.Exit                (ExitCode (..))
-import           System.Process.Typed       (proc, readProcess)
+import           System.Process.Typed       (proc, readProcess, setEnv)
 import           Text.Read                  (readMaybe)
 
 import           Text.XML.Light             (CData (..), Content (..),
@@ -61,7 +61,7 @@ readTrackFile path = do
     ExitFailure _ -> Left $ FfprobeProcessError (LBC.unpack errstr)
   where
     -- If you modify this, you'll probably need to also modify 'parseTrackProbe'.
-    cfg = proc "ffprobe" ["-loglevel", "error", "-show_format", path]
+    cfg = setEnv [("LC_ALL", "en_AU.UTF-8")] $ proc "ffprobe" ["-loglevel", "error", "-show_format", path]
 
 -- | Parse @ffprobe(1)@ output.
 parseTrackProbe :: FilePath -> ByteString -> Track
@@ -77,7 +77,8 @@ parseTrackProbe path str = Track { trkFilePath = path
   where
     m = M.fromList $ mapMaybe splitEquals $ LBC.lines str
     lookupRead k = (readMaybe . LBC.unpack) =<< M.lookup k m
-    lookupText k = (decodeLatin1 . LBC.toStrict) <$> M.lookup k m
+    lookupText k = (rightToMaybe . decodeUtf8' . LBC.toStrict) =<< M.lookup k m
+    rightToMaybe = either (const Nothing) Just
 
 -- | @ffprobe(1)@ reports duration in decimal seconds, but XSPF specifies
 -- integral milliseconds.

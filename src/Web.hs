@@ -12,7 +12,8 @@ Represent lists of playlists as HTML.
 {-# LANGUAGE OverloadedStrings #-}
 module Web where
 
-import           Playlist           (Album, Artist)
+import           Playlist           (Album, Artist, PlaylistError (..))
+import           Track              (TrackError (..))
 
 import           Lucid
 import qualified Network.URI.Encode as URI
@@ -46,7 +47,7 @@ artistListPage artists = doctypehtml_ $ do
   supercapHead label
   body_ $ do
     supercapBanner
-    main_ $ do
+    main_ $ div_ [class_ "aalist"] $ do
       h1_ label
       mapM_ (supercapList href <=< prependTitleLetter) $ NE.groupWith listToMaybe artists
   where
@@ -60,7 +61,7 @@ albumListPage artist albums = doctypehtml_ $ do
   body_ $ do
     supercapBanner
     nav_ $ a_ [href_ "/playlist"] "Back to album list"
-    main_ $ do
+    main_ $ div_ [class_ "aalist"] $ do
       h1_ label
       maybe mempty (supercapList href) $ NE.nonEmpty albums
   where
@@ -82,3 +83,26 @@ prependTitleLetter xs = do
   pure xs
   where
     firstLetter = fromMaybe ' ' $ listToMaybe $ NE.head xs
+
+
+-- | An error page, with the error message content to be provided.
+errorPage :: Html () -> Html ()
+errorPage errorContent = doctypehtml_ $ do
+  supercapHead label
+  body_ $ do
+    supercapBanner
+    nav_ $ a_ [href_ "/playlist"] "Back to album list"
+    main_ $ div_ [class_ "errorContent"] $ do
+      h1_ label
+      errorContent
+  where
+    label = "An error occurred"
+
+-- | An error page for errors encountered whilst generating playlists.
+playlistErrorPage :: PlaylistError -> Html ()
+playlistErrorPage (TrackErrors es) = errorPage errorDetail
+  where
+    errorDetail = ul_ $ mapM_ (\(FfprobeProcessError e) -> li_ (toHtml e)) es
+playlistErrorPage (NonexistentDir dir) = errorPage errorDetail
+  where
+    errorDetail = p_ $ toHtml $ "The following directory does not exist: " ++ dir

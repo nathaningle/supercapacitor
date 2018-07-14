@@ -33,10 +33,17 @@ nav a {
     color: #0D355A;
 }
 
-main {
+div.aalist {
     margin-left: auto;
     margin-right: auto;
     width: 20em;
+    padding: 1em;
+}
+
+div.errorContent {
+    margin-left: auto;
+    margin-right: auto;
+    width: 40em;
     padding: 1em;
 }
 

@@ -16,7 +16,8 @@ import           Config                        (Config (..))
 import           Playlist                      (Playlist, PlaylistError (..),
                                                 makeAlbumPlaylist, showXspfBS)
 import           PlaylistList                  (listAlbums, listArtists)
-import           Web                           (albumListPage, artistListPage)
+import           Web                           (albumListPage, artistListPage,
+                                                playlistErrorPage)
 
 import           Network.HTTP.Types.Status     (notFound404)
 import           Network.Wai.Middleware.Static (addBase, staticPolicy)
@@ -27,7 +28,6 @@ import           Web.Spock.Lucid               (lucid)
 
 
 import           Control.Monad.IO.Class        (MonadIO, liftIO)
-import qualified Data.Text                     as T
 import           System.Environment            (getArgs)
 
 
@@ -71,8 +71,8 @@ playlist cfg pl = do
   setHeader "Content-Type" "application/xspf+xml; charset=utf-8"
   bytes $ showXspfBS cfg pl
 
--- | TODO: present a proper error message.
+-- | TODO: is 404 always appropriate?
 playlist404 :: MonadIO m => PlaylistError -> ActionCtxT ctx m a
 playlist404 err = do
   setStatus notFound404
-  text $ T.pack $ show err
+  lucid $ playlistErrorPage err
