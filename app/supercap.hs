@@ -12,23 +12,25 @@ Serve a music library via HTTP.
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Config                        (Config (..))
-import           Playlist                      (Playlist, PlaylistError (..),
-                                                makeAlbumPlaylist, showXspfBS)
-import           PlaylistList                  (listAlbums, listArtists)
-import           Web                           (albumListPage, artistListPage,
-                                                playlistErrorPage)
+import           Config                         (Config (..))
+import           Playlist                       (Playlist, PlaylistError (..),
+                                                 makeAlbumPlaylist, showXspfBS)
+import           PlaylistList                   (listAlbums, listArtists)
+import           Web                            (albumListPage, artistListPage,
+                                                 playlistErrorPage)
 
-import           Network.HTTP.Types.Status     (notFound404)
-import           Network.Wai.Middleware.Static (addBase, staticPolicy)
+import           Network.HTTP.Types             (RequestHeaders, notFound404)
+import           Network.Wai.Middleware.Rewrite (PathsAndQueries,
+                                                 rewritePureWithQueries)
+import           Network.Wai.Middleware.Static  (addBase, staticPolicy)
 import           Web.Spock
-import           Web.Spock.Config              (PoolOrConn (..),
-                                                defaultSpockCfg)
-import           Web.Spock.Lucid               (lucid)
+import           Web.Spock.Config               (PoolOrConn (..),
+                                                 defaultSpockCfg)
+import           Web.Spock.Lucid                (lucid)
 
 
-import           Control.Monad.IO.Class        (MonadIO, liftIO)
-import           System.Environment            (getArgs)
+import           Control.Monad.IO.Class         (MonadIO, liftIO)
+import           System.Environment             (getArgs)
 
 
 type Api = SpockM () () () ()
@@ -46,8 +48,8 @@ main = do
 
 app :: Config -> Api
 app cfg = do
-  -- TODO: add prefix for static files
-  middleware $ staticPolicy (addBase (musicRootPath cfg))
+  -- Serve the music files.
+  middleware $ rewritePureWithQueries tracksRewrite . staticPolicy (addBase (musicRootPath cfg))
 
   get ("playlist" <//> var <//> var) $ \artist album -> do
     plResult <- liftIO $ makeAlbumPlaylist cfg artist album
@@ -63,6 +65,11 @@ app cfg = do
   get "playlist" $ do
     artists <- liftIO $ listArtists cfg
     either playlist404 (lucid . artistListPage) artists
+
+-- | Strip the prefix from requests for music files.
+tracksRewrite :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
+tracksRewrite ("tracks":ps, q) _ = (ps, q)
+tracksRewrite psAndQs          _ = psAndQs
 
 
 -- | Send a 'Playlist' as an XSPF file.

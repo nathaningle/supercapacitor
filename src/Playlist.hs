@@ -98,7 +98,8 @@ xmlHeaderUtf8 = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 pathLocalToRemote :: Config -> FilePath -> Maybe String
 pathLocalToRemote Config{..} = fmap toUrlPath . stripPrefix (addTrailingPathSeparator musicRootPath)
   where
-    toUrlPath = (musicRootUrl </>) . joinPath . map URI.encode . splitDirectories
+    toUrlPath = prependRoot . joinPath . map URI.encode . splitDirectories
+    prependRoot p = musicRootUrl </> "tracks" </> p
 
 -- | Convert a 'Playlist' to its XSPF representation with URLs.
 toXspfRemote :: Config -> Playlist -> Element
