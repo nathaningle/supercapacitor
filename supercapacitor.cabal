@@ -24,6 +24,7 @@ library
   ghc-options: -Wall -Wcompat -Werror -O2
   build-depends:
       base >=4.7 && <5
+    , async
     , bytestring
     , containers
     , directory

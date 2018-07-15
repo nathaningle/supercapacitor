@@ -12,18 +12,19 @@ A list of music tracks with metadata.
 {-# LANGUAGE RecordWildCards #-}
 module Playlist where
 
-import           Config                (Config (..))
-import           Track                 (Track (..), TrackError (..),
-                                        readTrackFile, toXML)
+import           Config                   (Config (..))
+import           Track                    (Track (..), TrackError (..),
+                                           readTrackFile, toXML)
 
-import           Data.ByteString       (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import           Data.Either           (partitionEithers)
-import           Data.List             (sortOn, stripPrefix)
-import qualified Network.URI.Encode    as URI
-import           System.Directory      (doesDirectoryExist, listDirectory)
-import           System.FilePath       (addTrailingPathSeparator, joinPath,
-                                        splitDirectories, (</>))
+import           Control.Concurrent.Async (mapConcurrently)
+import           Data.ByteString          (ByteString)
+import qualified Data.ByteString.Char8    as BS
+import           Data.Either              (partitionEithers)
+import           Data.List                (sortOn, stripPrefix)
+import qualified Network.URI.Encode       as URI
+import           System.Directory         (doesDirectoryExist, listDirectory)
+import           System.FilePath          (addTrailingPathSeparator, joinPath,
+                                           splitDirectories, (</>))
 
 import           Text.XML.Light
 
@@ -46,7 +47,7 @@ data PlaylistError = TrackErrors [TrackError]
 playlistDir :: FilePath -> IO (Either PlaylistError Playlist)
 playlistDir path = do
   files <- listDirectory path
-  tracks <- mapM (readTrackFile . (path </>)) files
+  tracks <- mapConcurrently (readTrackFile . (path </>)) files
   pure $ case partitionEithers tracks of
     ([], ts) -> Right $ sortOn trkTrackNum ts
     (es, _ ) -> Left  $ TrackErrors es
